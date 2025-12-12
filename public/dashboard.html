@@ -4,431 +4,552 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>NRI Real Estate — Dashboard</title>
-
-    <!-- Minimal inline styling so it's a single file. -->
+    <title>Dashboard — NRI Real Estate Portal</title>
     <style>
-        :root {
-            --bg: #f5f7fb;
-            --card: #fff;
-            --accent: #2b7cff;
-            --muted: #6b7280;
-            --gap: 16px;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box
         }
 
         body {
             margin: 0;
-            background: var(--bg);
-            color: #111
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+            background: #f1f3f6;
+            color: #0f172a
         }
 
-        .wrap {
-            max-width: 980px;
-            margin: 30px auto;
-            padding: 18px
+        .page {
+            max-width: 1200px;
+            margin: 28px auto;
+            padding: 0 18px
         }
 
         header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 14px
+        }
+
+        .title-area {
+            display: flex;
+            flex-direction: column
         }
 
         h1 {
             margin: 0;
-            font-size: 20px
+            font-size: 22px
         }
 
-        .controls {
+        .subtitle {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 6px
+        }
+
+        .header-actions {
+            margin-left: auto;
             display: flex;
             gap: 10px;
             align-items: center
         }
 
         .btn {
-            background: var(--accent);
+            background: #2563eb;
             color: #fff;
-            padding: 10px 12px;
+            padding: 8px 12px;
             border-radius: 8px;
-            border: none;
-            cursor: pointer
-        }
-
-        .btn.secondary {
-            background: #fff;
-            color: var(--accent);
-            border: 1px solid #dbe7ff
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 14px
-        }
-
-        .card {
-            background: var(--card);
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 6px 18px rgba(20, 25, 35, 0.04)
-        }
-
-        .thumb {
-            height: 140px;
-            background: #eee;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden
-        }
-
-        .thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover
-        }
-
-        .meta {
-            margin-top: 8px;
+            border: 0;
+            cursor: pointer;
             font-size: 14px
         }
 
+        .btn.gray {
+            background: #f3f6fb;
+            color: #1f2937;
+            border: 1px solid #e6edf5
+        }
+
         .muted {
-            color: var(--muted);
+            color: #6b7280;
             font-size: 13px
         }
 
-        .form-row {
+        /* big centered panel like your screenshot */
+        .panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 14px 18px;
+            box-shadow: 0 8px 30px rgba(8, 12, 20, 0.06);
+            border: 1px solid #eef2f7
+        }
+
+        .status {
+            margin-bottom: 12px;
+            color: #374151
+        }
+
+        /* grid of cards 2 columns */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px
+        }
+
+        @media(max-width:920px) {
+            .grid {
+                grid-template-columns: repeat(1, 1fr)
+            }
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #eef2f7;
             display: flex;
+            flex-direction: column
+        }
+
+        .card .media {
+            height: 150px;
+            background: #f2f6fb;
+            overflow: hidden
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .card .body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
             gap: 8px
+        }
+
+        .card .title {
+            font-weight: 700;
+            font-size: 18px;
+            margin: 0
+        }
+
+        .card .meta {
+            color: #6b7280;
+            font-size: 13px
+        }
+
+        .card .smallmeta {
+            color: #475569;
+            font-size: 13px
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 6px
+        }
+
+        .actions .btn.small {
+            padding: 6px 10px;
+            font-size: 13px
+        }
+
+        .btn.delete {
+            background: #ef4444
+        }
+
+        .owner {
+            color: #475569;
+            font-size: 13px;
+            margin-top: 8px
+        }
+
+        /* modals */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 10, 12, 0.45);
+            z-index: 1200;
+            padding: 20px
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            max-width: 520px;
+            width: 100%;
+            max-height: calc(100vh - 80px);
+            overflow: auto;
+            position: relative;
+            box-shadow: 0 18px 60px rgba(8, 12, 20, 0.25)
+        }
+
+        .modal h3 {
+            margin: 0 0 8px 0
+        }
+
+        .close {
+            position: absolute;
+            right: 12px;
+            top: 10px;
+            background: transparent;
+            border: 0;
+            font-size: 18px;
+            cursor: pointer
+        }
+
+        label {
+            display: block;
+            margin-top: 8px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #111827
         }
 
         input[type="text"],
         input[type="number"],
         textarea,
-        select {
+        input[type="file"] {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             border-radius: 8px;
-            border: 1px solid #e6e9ef;
-            font-size: 14px
+            border: 1px solid #e6edf5;
+            font-size: 14px;
+            background: #fff
         }
 
         textarea {
-            min-height: 80px
+            min-height: 70px;
+            resize: vertical
         }
 
-        /* dialog styles */
-        dialog {
-            border-radius: 10px;
-            padding: 0;
-            border: none;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12)
-        }
-
-        .dialog-header {
+        .modal-actions {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 14px;
-            border-bottom: 1px solid #f1f3f6
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 12px
         }
 
-        .dialog-body {
-            padding: 14px
-        }
-
-        .close-btn {
-            background: transparent;
-            border: none;
-            font-size: 20px;
-            cursor: pointer
-        }
-
-        .phone-box {
-            font-weight: 600;
-            font-size: 16px;
-            margin-top: 8px
-        }
-
-        .hidden {
-            display: none
-        }
-
-        .center {
-            text-align: center
+        /* small helpers */
+        .right {
+            margin-left: auto;
         }
     </style>
 </head>
 
 <body>
-    <div class="wrap">
+    <div class="page">
         <header>
-            <div>
-                <h1>NRI Real Estate — Dashboard</h1>
-                <div class="muted">Browse properties or add a listing (must be logged in)</div>
+            <div class="title-area">
+                <h1>Dashboard</h1>
+                <div class="subtitle">Browse and manage property listings</div>
             </div>
 
-            <div class="controls">
-                <button id="btn-refresh" class="btn secondary">Refresh</button>
-                <button id="btn-add" class="btn">Add Property</button>
-                <button id="btn-logout" class="btn secondary">Logout</button>
+            <div class="header-actions">
+                <button id="openAddBtn" class="btn">Add Property</button>
             </div>
         </header>
 
-        <!-- Properties grid -->
-        <main id="main">
-            <section id="props" class="grid">
-                <!-- property cards inserted here by JS -->
-            </section>
+        <div class="panel">
+            <div id="status" class="status muted">Loading…</div>
 
-            <p id="empty-msg" class="muted center" style="display:none">No properties listed yet.</p>
-        </main>
+            <div id="gridWrap">
+                <div id="grid" class="grid" aria-live="polite"></div>
+            </div>
+        </div>
     </div>
 
-    <!-- Add property dialog -->
-    <dialog id="addDialog">
-        <div class="dialog-header">
-            <strong>Add Property</strong>
-            <button class="close-btn" id="addClose">&times;</button>
-        </div>
-        <div class="dialog-body">
-            <div class="form-row">
-                <input id="p-title" type="text" placeholder="Title (eg. 2BHK in Mumbai)" />
-            </div>
-            <div class="form-row spaced">
-                <textarea id="p-desc" placeholder="Description"></textarea>
-            </div>
-            <div class="form-row">
-                <input id="p-price" type="number" placeholder="Price (INR)" />
-                <input id="p-city" type="text" placeholder="City" />
-            </div>
-            <div class="form-row spaced">
-                <input id="p-photos" type="file" accept="image/*" multiple />
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
-                <button id="addCancel" class="btn secondary">Cancel</button>
-                <button id="addSave" class="btn">Save</button>
-            </div>
-            <p id="add-msg" class="muted" style="margin-top:8px;display:none"></p>
-        </div>
-    </dialog>
+    <!-- Add Property Modal -->
+    <div id="addModal" class="modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true">
+            <button id="addClose" class="close" title="Close">✕</button>
+            <h3>Add Property</h3>
+            <form id="addForm" enctype="multipart/form-data">
+                <label for="title">Title</label>
+                <input id="title" name="title" type="text" required />
 
-    <!-- Buy dialog (shows owner phone) -->
-    <dialog id="buyDialog">
-        <div class="dialog-header">
-            <strong>Contact Owner</strong>
-            <button class="close-btn" id="buyClose">&times;</button>
+                <label for="city">City</label>
+                <input id="city" name="city" type="text" />
+
+                <label for="price">Price</label>
+                <input id="price" name="price" type="number" />
+
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="3"></textarea>
+
+                <label for="photos">Photos (required)</label>
+                <input id="photos" name="photos" type="file" accept="image/*" multiple required />
+
+                <div class="modal-actions">
+                    <button type="button" id="addCancel" class="btn gray">Cancel</button>
+                    <button type="submit" class="btn">Save</button>
+                </div>
+                <div id="addStatus" class="muted" style="margin-top:8px"></div>
+            </form>
         </div>
-        <div class="dialog-body">
-            <div id="buy-content">
-                <p class="muted">If you wish to buy, contact the owner below:</p>
-                <div id="owner-phone" class="phone-box">—</div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div id="contactModal" class="modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true">
+            <button id="contactClose" class="close" title="Close">✕</button>
+            <h3>Contact Owner</h3>
+            <div id="contactMsg" class="muted">Fetching contact…</div>
+            <div id="contactPhone" style="margin-top:12px;font-weight:700;font-size:16px"></div>
+            <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+                <button id="contactCall" class="btn" style="display:none">Call</button>
+                <button id="contactCloseBtn" class="btn gray">Close</button>
             </div>
         </div>
-    </dialog>
+    </div>
 
     <script>
-        // public/dashboard.html inline JS
-        // Important: this file assumes your server sets a session cookie on login.
-        // The endpoints used:
-        //  - GET /api/me          -> to check logged in user
-        //  - GET /api/properties  -> list properties
-        //  - POST /api/properties/add (multipart) -> add property (requires login)
-        //  - GET /api/property/:id/contact -> fetch owner phone (requires login)
-        //  - GET /api/logout -> logout
+        let PROPERTIES = [];
+        let currentUser = null;
 
-        const el = (id) => document.getElementById(id);
+        const statusEl = document.getElementById('status');
+        const gridEl = document.getElementById('grid');
 
-        // dialogs
-        const addDialog = el('addDialog');
-        const buyDialog = el('buyDialog');
+        const openAddBtn = document.getElementById('openAddBtn');
+        const addModal = document.getElementById('addModal');
+        const addClose = document.getElementById('addClose');
+        const addCancel = document.getElementById('addCancel');
+        const addForm = document.getElementById('addForm');
+        const addStatus = document.getElementById('addStatus');
 
-        // buttons
-        const btnAdd = el('btn-add');
-        const btnRefresh = el('btn-refresh');
-        const btnLogout = el('btn-logout');
+        const contactModal = document.getElementById('contactModal');
+        const contactClose = document.getElementById('contactClose');
+        const contactCloseBtn = document.getElementById('contactCloseBtn');
+        const contactMsg = document.getElementById('contactMsg');
+        const contactPhone = document.getElementById('contactPhone');
+        const contactCall = document.getElementById('contactCall');
 
-        const addClose = el('addClose');
-        const addCancel = el('addCancel');
-        const addSave = el('addSave');
-        const addMsg = el('add-msg');
+        function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-        const buyClose = el('buyClose');
-        const ownerPhone = el('owner-phone');
-
-        // property list container
-        const props = el('props');
-        const emptyMsg = el('empty-msg');
-
-        // form inputs
-        const pTitle = el('p-title');
-        const pDesc = el('p-desc');
-        const pPrice = el('p-price');
-        const pCity = el('p-city');
-        const pPhotos = el('p-photos');
-
-        // Utility: show toast-like message in page
-        function showPageMsg(text, isError = false) {
-            addMsg.style.display = 'block';
-            addMsg.style.color = isError ? '#b91c1c' : '#0f5132';
-            addMsg.textContent = text;
-            setTimeout(() => addMsg.style.display = 'none', 5000);
+        function parsePhotos(val) {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string') {
+                try { const p = JSON.parse(val); return Array.isArray(p) ? p : [val]; } catch (e) { return [val]; }
+            }
+            return [];
         }
 
-        // Check if user is logged in. If not, redirect to login page.
-        async function checkAuth() {
+        async function loadMe() {
             try {
-                const res = await fetch('/api/me');
-                const data = await res.json();
-                if (!data.user) {
-                    window.location.href = '/';
-                    return null;
-                }
-                return data.user;
-            } catch (err) {
-                console.error('Auth check failed', err);
-                window.location.href = '/';
-                return null;
+                const r = await fetch('/api/me', { credentials: 'include' });
+                const j = await r.json();
+                currentUser = j.user || null;
+            } catch (e) {
+                console.error('loadMe error', e);
+                currentUser = null;
             }
         }
 
-        // Fetch properties and render
         async function loadProperties() {
+            statusEl.textContent = 'Loading properties…';
             try {
-                const res = await fetch('/api/properties');
-                if (!res.ok) throw new Error('Failed to load properties');
-                const { properties } = await res.json();
-                props.innerHTML = '';
-                if (!properties || properties.length === 0) {
-                    emptyMsg.style.display = 'block';
-                    return;
-                } else emptyMsg.style.display = 'none';
-
-                properties.forEach(p => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-
-                    const thumb = document.createElement('div');
-                    thumb.className = 'thumb';
-                    if (p.preview_url) {
-                        const img = document.createElement('img');
-                        img.src = p.preview_url;
-                        thumb.appendChild(img);
-                    } else {
-                        thumb.textContent = 'No image';
-                    }
-
-                    const m = document.createElement('div');
-                    m.className = 'meta';
-                    m.innerHTML = `<div style="font-weight:600">${escapeHtml(p.title)}</div>
-                         <div class="muted">${escapeHtml(p.city)} • ₹${p.price ?? 'N/A'}</div>
-                         <div style="margin-top:8px;font-size:13px">${escapeHtml(p.description || '')}</div>
-                         <div style="margin-top:8px"><button class="btn" data-id="${p.property_id}" data-owner="${p.owner_id}" style="padding:6px 8px;font-size:13px">Buy</button></div>
-                         <div class="muted" style="margin-top:8px">Owner: ${escapeHtml(p.owner_name)}</div>`;
-
-                    card.appendChild(thumb);
-                    card.appendChild(m);
-                    props.appendChild(card);
-
-                    // attach Buy handler
-                    const buyBtn = m.querySelector('button');
-                    buyBtn.addEventListener('click', () => onBuyClick(p.property_id));
-                });
-            } catch (err) {
-                console.error(err);
-                emptyMsg.style.display = 'block';
-                emptyMsg.textContent = 'Unable to load properties';
+                const r = await fetch('/api/properties');
+                if (!r.ok) throw new Error('Failed to load properties');
+                const j = await r.json();
+                PROPERTIES = j.properties || [];
+                renderProperties();
+                statusEl.textContent = `Loaded ${PROPERTIES.length} listings`;
+            } catch (e) {
+                console.error('loadProperties error', e);
+                statusEl.textContent = 'Error loading properties';
+                PROPERTIES = [];
+                renderProperties();
             }
         }
 
-        // Escape simple HTML to avoid injection in this minimal demo
-        function escapeHtml(s) {
-            if (!s && s !== 0) return '';
-            return String(s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-        }
-
-        // Add property flow
-        btnAdd.addEventListener('click', async () => {
-            // ensure user logged in
-            const user = await checkAuth();
-            if (!user) return;
-            addDialog.showModal();
-        });
-        addClose.addEventListener('click', () => addDialog.close());
-        addCancel.addEventListener('click', () => addDialog.close());
-
-        addSave.addEventListener('click', async () => {
-            const title = pTitle.value.trim();
-            if (!title) { showPageMsg('Title required', true); return; }
-            if (!pPhotos.files || pPhotos.files.length === 0) { showPageMsg('Upload at least one photo', true); return; }
-
-            // build FormData for multipart upload
-            const fd = new FormData();
-            fd.append('title', title);
-            fd.append('description', pDesc.value.trim());
-            fd.append('price', pPrice.value ? String(pPrice.value) : '');
-            fd.append('city', pCity.value.trim());
-
-            for (let i = 0; i < pPhotos.files.length; i++) {
-                fd.append('photos', pPhotos.files[i]); // server expects field name "photos"
+        function renderProperties() {
+            gridEl.innerHTML = '';
+            if (!PROPERTIES || PROPERTIES.length === 0) {
+                const no = document.createElement('div');
+                no.textContent = 'No listings yet.';
+                no.className = 'muted';
+                gridEl.appendChild(no);
+                return;
             }
 
-            addSave.disabled = true;
-            showPageMsg('Uploading...');
+            PROPERTIES.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'card';
 
-            try {
-                const res = await fetch('/api/properties/add', { method: 'POST', body: fd, credentials: 'same-origin' });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data && data.error ? data.error : 'Upload failed');
-                showPageMsg('Property added successfully');
-                addDialog.close();
-                // clear fields
-                pTitle.value = ''; pDesc.value = ''; pPrice.value = ''; pCity.value = ''; pPhotos.value = '';
-                // reload list
-                await loadProperties();
-            } catch (err) {
-                console.error('Add property error', err);
-                showPageMsg(err.message || 'Failed to add property', true);
-            } finally {
-                addSave.disabled = false;
-            }
-        });
+                const media = document.createElement('div');
+                media.className = 'media';
+                const img = document.createElement('img');
+                const photos = parsePhotos(p.photos);
+                img.src = p.preview_url || (photos.length ? photos[0] : '/uploads/placeholder.png');
+                img.alt = p.title || 'property';
+                media.appendChild(img);
 
-        // Buy click: fetch owner phone and show dialog
-        async function onBuyClick(propertyId) {
-            try {
-                const res = await fetch(`/api/property/${propertyId}/contact`);
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({ error: 'Unknown' }));
-                    throw new Error(err && err.error ? err.error : 'Failed to fetch contact');
+                const body = document.createElement('div');
+                body.className = 'body';
+
+                const title = document.createElement('div');
+                title.className = 'title';
+                title.textContent = p.title || '';
+
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = `${p.city || ''} · ₹${p.price || ''}`;
+
+                const smallmeta = document.createElement('div');
+                smallmeta.className = 'smallmeta';
+                if (p.property_type) smallmeta.textContent = p.property_type;
+
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+
+                const buyBtn = document.createElement('button');
+                buyBtn.className = 'btn small';
+                buyBtn.textContent = 'Buy';
+                buyBtn.onclick = () => openContactModal(p.property_id);
+                actions.appendChild(buyBtn);
+
+                if (currentUser && p.owner_id === currentUser.user_id) {
+                    const editLink = document.createElement('a');
+                    editLink.className = 'btn small gray';
+                    editLink.textContent = 'Edit';
+                    editLink.href = '/edit_property.html?id=' + encodeURIComponent(p.property_id);
+                    actions.appendChild(editLink);
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'btn small delete';
+                    delBtn.textContent = 'Delete';
+                    delBtn.onclick = () => deleteProperty(p.property_id);
+                    actions.appendChild(delBtn);
                 }
-                const data = await res.json();
-                ownerPhone.textContent = data.phone || 'No phone provided';
-                buyDialog.showModal();
+
+                const owner = document.createElement('div');
+                owner.className = 'owner';
+                owner.textContent = 'Owner: ' + (p.owner_name || '—');
+
+                body.appendChild(title);
+                body.appendChild(meta);
+                if (smallmeta.textContent) body.appendChild(smallmeta);
+                body.appendChild(actions);
+                body.appendChild(owner);
+
+                card.appendChild(media);
+                card.appendChild(body);
+                gridEl.appendChild(card);
+            });
+        }
+
+        function openContactModal(propertyId) {
+            contactMsg.textContent = 'Fetching contact…';
+            contactPhone.textContent = '';
+            contactCall.style.display = 'none';
+            contactModal.style.display = 'flex';
+
+            fetch('/api/property/' + encodeURIComponent(propertyId) + '/contact', { credentials: 'include' })
+                .then(async res => {
+                    if (!res.ok) {
+                        if (res.status === 401) contactMsg.textContent = 'Please login to view contact.';
+                        else if (res.status === 404) contactMsg.textContent = 'Property not found.';
+                        else contactMsg.textContent = 'Could not fetch contact.';
+                        return;
+                    }
+                    const j = await res.json();
+                    const phone = j.phone || 'No phone provided';
+                    contactMsg.textContent = '';
+                    contactPhone.textContent = phone;
+                    if (phone && phone !== 'No phone provided' && phone.trim() !== '') {
+                        contactCall.style.display = 'inline-block';
+                        contactCall.onclick = () => { location.href = 'tel:' + phone.replace(/\s+/g, ''); };
+                    } else {
+                        contactCall.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('contact fetch error', err);
+                    contactMsg.textContent = 'Error fetching contact.';
+                });
+        }
+
+        function closeContactModal() {
+            contactModal.style.display = 'none';
+            contactMsg.textContent = '';
+            contactPhone.textContent = '';
+            contactCall.style.display = 'none';
+        }
+
+        contactClose.addEventListener('click', closeContactModal);
+        contactCloseBtn.addEventListener('click', closeContactModal);
+
+        async function deleteProperty(id) {
+            if (!confirm('Delete this listing? This will also remove uploaded images.')) return;
+            try {
+                const r = await fetch('/api/property/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+                const j = await r.json();
+                if (r.ok && j.success) {
+                    alert('Deleted');
+                    await loadProperties();
+                } else {
+                    alert(j.error || 'Delete failed');
+                }
             } catch (err) {
-                console.error('Buy error', err);
-                alert('Unable to get contact info. Make sure you are logged in.');
+                console.error('delete error', err);
+                alert('Delete error');
             }
         }
 
-        buyClose.addEventListener('click', () => buyDialog.close());
+        function openAddModal() { addModal.style.display = 'flex'; addStatus.textContent = ''; addForm.reset(); }
+        function closeAddModal() { addModal.style.display = 'none'; addStatus.textContent = ''; addForm.reset(); }
+        openAddBtn.addEventListener('click', openAddModal);
+        addClose.addEventListener('click', closeAddModal);
+        addCancel.addEventListener('click', closeAddModal);
 
-        // Logout
-        btnLogout.addEventListener('click', async () => {
-            await fetch('/api/logout');
-            window.location.href = '/';
+        addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            addStatus.textContent = 'Uploading...';
+            const files = document.getElementById('photos').files;
+            if (!files || files.length === 0) { addStatus.textContent = 'Please select at least one photo'; return; }
+            const fd = new FormData(addForm);
+            try {
+                const res = await fetch('/api/properties/add', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'include'
+                });
+                const j = await res.json();
+                if (res.ok && j.success) {
+                    addStatus.textContent = 'Saved';
+                    await loadProperties();
+                    setTimeout(closeAddModal, 400);
+                } else {
+                    addStatus.textContent = j.error || 'Save failed';
+                    console.error('add error', j);
+                }
+            } catch (err) {
+                console.error('add exception', err);
+                addStatus.textContent = 'Upload failed';
+            }
         });
 
-        // Refresh
-        btnRefresh.addEventListener('click', loadProperties);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (addModal.style.display === 'flex') closeAddModal();
+                if (contactModal.style.display === 'flex') closeContactModal();
+            }
+        });
 
-        // On load: check auth then load properties
         (async function init() {
-            await checkAuth();    // will redirect to / if not logged in
+            await loadMe();
             await loadProperties();
         })();
     </script>

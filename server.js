@@ -1,4 +1,3 @@
-// server.js - complete backend (local file uploads)
 const express = require('express');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
@@ -11,11 +10,14 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
+
+// Helpful startup info
+console.log('RUNNING server.js from', __filename);
 console.log('server.js loaded — starting up');
 
 const PORT = 3000;
 
-// ---------- Database config (adjust if needed) ----------
+// ---------- DB config (adjust to your environment if needed) ----------
 const DB_HOST = 'localhost';
 const DB_USER = 'nri_user';
 const DB_PASSWORD = 'nri_pass_123';
@@ -41,7 +43,6 @@ const upload = multer({
     storage,
     limits: { fileSize: MAX_FILE_BYTES },
     fileFilter: (req, file, cb) => {
-        // allow common image extensions
         const allowed = /\.(jpe?g|png|webp)$/i;
         if (!allowed.test(file.originalname)) {
             return cb(new Error('Only JPG/PNG/WEBP files allowed'));
@@ -50,8 +51,12 @@ const upload = multer({
     }
 });
 
-// ---------- Express + middlewares ----------
-app.use(express.static(path.join(__dirname, 'public'))); // serve index.html and uploads
+// ---------- Middlewares ----------
+app.use((req, res, next) => {
+    console.log(new Date().toISOString(), req.method, req.url);
+    next();
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
@@ -80,7 +85,6 @@ function requireLogin(req, res, next) {
     return res.status(401).json({ error: 'Not authorized' });
 }
 
-// Normalizes DB photo values: can be JSON text, an array, or null
 function normalizePhotos(value) {
     if (!value) return [];
     if (Array.isArray(value)) return value;
@@ -97,7 +101,7 @@ function normalizePhotos(value) {
 
 // ---------- Routes ----------
 
-// Serve root login page
+// Serve root
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -198,7 +202,6 @@ app.post('/api/properties/add', requireLogin, upload.array('photos', 10), async 
             return res.status(400).json({ error: 'You must upload at least one photo' });
         }
 
-        // build relative URLs for saved files
         const photoUrls = req.files.map(f => `/uploads/${path.basename(f.path)}`);
 
         const conn = await pool.getConnection();
@@ -228,6 +231,163 @@ app.post('/api/properties/add', requireLogin, upload.array('photos', 10), async 
     }
 });
 
+// List properties
+app.get('/api/properties', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const [rows] = await conn.query(
+                `SELECT p.property_id, p.title, p.description, p.price, p.city, p.owner_id, u.full_name, p.photos, p.created_at
+         FROM properties p
+         JOIN user_details u ON p.owner_id = u.user_id
+         ORDER BY p.created_at DESC`
+            );
+
+            const properties = rows.map(r => {
+                const photos = normalizePhotos(r.photos);
+                return {
+                    property_id: r.property_id,
+                    title: r.title,
+                    description: r.description,
+                    price: r.price,
+                    city: r.city,
+                    owner_id: r.owner_id,
+                    owner_name: r.full_name,
+                    photos,
+                    preview_url: (photos && photos.length) ? photos[0] : null,
+                    created_at: r.created_at
+                };
+            });
+
+            return res.json({ properties });
+        } finally {
+            conn.release();
+        }
+    } catch (err) {
+        console.error('List properties error:', err);
+        return res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get owner's phone for a property (buyer must be logged in)
+app.get('/api/property/:id/contact', requireLogin, async (req, res) => {
+    try {
+        const property_id = req.params.id;
+        const conn = await pool.getConnection();
+        try {
+            const [rows] = await conn.query(
+                `SELECT u.phone FROM properties p JOIN user_details u ON p.owner_id = u.user_id WHERE p.property_id = ? LIMIT 1`,
+                [property_id]
+            );
+            if (rows.length === 0) return res.status(404).json({ error: 'Property not found' });
+            return res.json({ phone: rows[0].phone || 'No phone provided' });
+        } finally {
+            conn.release();
+        }
+    } catch (err) {
+        console.error('Contact fetch error:', err);
+        return res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Delete property (only owner can delete) — also deletes local upload files
+app.delete('/api/property/:id', requireLogin, async (req, res) => {
+    try {
+        const property_id = req.params.id;
+        const user_id = req.session.user.user_id;
+
+        const conn = await pool.getConnection();
+        try {
+            const [rows] = await conn.query(
+                `SELECT owner_id, photos FROM properties WHERE property_id = ? LIMIT 1`,
+                [property_id]
+            );
+            if (rows.length === 0) return res.status(404).json({ error: 'Property not found' });
+            if (rows[0].owner_id !== user_id) return res.status(403).json({ error: 'Not allowed' });
+
+            const photos = normalizePhotos(rows[0].photos);
+            photos.forEach(p => {
+                try {
+                    if (typeof p === 'string' && p.startsWith('/uploads/')) {
+                        const fp = path.join(__dirname, 'public', p.replace(/^\/+/, ''));
+                        if (fs.existsSync(fp)) fs.unlinkSync(fp);
+                    }
+                } catch (e) {
+                    console.error('Failed to delete file', p, e);
+                }
+            });
+
+            await conn.query(`DELETE FROM properties WHERE property_id = ?`, [property_id]);
+
+            return res.json({ success: true });
+        } finally {
+            conn.release();
+        }
+    } catch (err) {
+        console.error("Delete property error:", err);
+        return res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Update property (only owner) — accepts multipart/form-data for optional new photos
+app.put('/api/property/:id', requireLogin, upload.array('photos', 10), async (req, res) => {
+    try {
+        const property_id = req.params.id;
+        const user_id = req.session.user.user_id;
+
+        const conn = await pool.getConnection();
+        try {
+            const [rows] = await conn.query(`SELECT owner_id, photos FROM properties WHERE property_id = ? LIMIT 1`, [property_id]);
+            if (rows.length === 0) return res.status(404).json({ error: 'Property not found' });
+            if (rows[0].owner_id !== user_id) return res.status(403).json({ error: 'Not allowed' });
+
+            const title = req.body.title || null;
+            const description = req.body.description || null;
+            const price = req.body.price || null;
+            const city = req.body.city || null;
+
+            let newPhotos = null;
+            if (req.files && req.files.length > 0) {
+                const oldPhotos = normalizePhotos(rows[0].photos);
+                oldPhotos.forEach(p => {
+                    try {
+                        if (typeof p === 'string' && p.startsWith('/uploads/')) {
+                            const fp = path.join(__dirname, 'public', p.replace(/^\/+/, ''));
+                            if (fs.existsSync(fp)) fs.unlinkSync(fp);
+                        }
+                    } catch (e) { console.error('Failed to delete old photo', e); }
+                });
+
+                newPhotos = req.files.map(f => `/uploads/${path.basename(f.path)}`);
+            }
+
+            const updates = [];
+            const params = [];
+            if (title !== null) { updates.push('title = ?'); params.push(title); }
+            if (description !== null) { updates.push('description = ?'); params.push(description); }
+            if (price !== null) { updates.push('price = ?'); params.push(price); }
+            if (city !== null) { updates.push('city = ?'); params.push(city); }
+            if (newPhotos !== null) { updates.push('photos = ?'); params.push(JSON.stringify(newPhotos)); }
+
+            if (updates.length === 0) {
+                return res.status(400).json({ error: 'No fields to update' });
+            }
+
+            params.push(property_id);
+            const sql = `UPDATE properties SET ${updates.join(', ')} WHERE property_id = ?`;
+            await conn.query(sql, params);
+
+            return res.json({ success: true });
+        } finally {
+            conn.release();
+        }
+    } catch (err) {
+        console.error('Update property error:', err);
+        return res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Users listing (joined user_details + auth_users) - password_hash not returned
 app.get('/api/users', async (req, res) => {
     try {
         const conn = await pool.getConnection();
@@ -261,27 +421,9 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
-app.get('/api/property/:id/contact', requireLogin, async (req, res) => {
-    try {
-        const property_id = req.params.id;
-        const conn = await pool.getConnection();
-        try {
-            const [rows] = await conn.query(
-                `SELECT u.phone FROM properties p JOIN user_details u ON p.owner_id = u.user_id WHERE p.property_id = ? LIMIT 1`,
-                [property_id]
-            );
-            if (rows.length === 0) return res.status(404).json({ error: 'Property not found' });
-            return res.json({ phone: rows[0].phone || 'No phone provided' });
-        } finally {
-            conn.release();
-        }
-    } catch (err) {
-        console.error('Contact fetch error:', err);
-        return res.status(500).json({ error: 'Server error' });
-    }
-});
-
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);

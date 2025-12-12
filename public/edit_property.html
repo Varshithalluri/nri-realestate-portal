@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Edit Property</title>
+    <style>
+        body {
+            font-family: Inter, Arial;
+            margin: 20px;
+            background: #f6f8fb;
+            color: #0f172a
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto
+        }
+
+        .card {
+            background: #fff;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(12, 16, 22, 0.06)
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            font-weight: 600
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e6edf5
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px
+        }
+
+        .btn {
+            background: #2563eb;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none
+        }
+
+        .btn-danger {
+            background: #ef4444
+        }
+
+        .muted {
+            color: #6b7280
+        }
+
+        .thumb {
+            max-width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #e6edf5;
+            margin-right: 8px
+        }
+
+        .thumb-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Edit Property</h2>
+        <div id="status" class="muted">Loading…</div>
+
+        <div class="card" id="card" style="display:none">
+            <form id="editForm">
+                <label>Title</label>
+                <input name="title" id="title" required />
+
+                <label>City</label>
+                <input name="city" id="city" />
+
+                <label>Price</label>
+                <input name="price" id="price" type="number" />
+
+                <label>Description</label>
+                <textarea id="description" name="description" rows="5"></textarea>
+
+                <label>Existing Photos</label>
+                <div id="existingPhotos" class="thumb-row"></div>
+
+                <label>Replace photos (optional) — choose 1 or more</label>
+                <input id="photos" type="file" name="photos" multiple accept="image/*" />
+
+                <div class="actions">
+                    <button type="submit" class="btn">Save Changes</button>
+                    <a href="/dashboard.html" class="btn btn-danger">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // edit_property.html script
+        const params = new URLSearchParams(window.location.search);
+        const propId = params.get('id');
+        if (!propId) {
+            document.getElementById('status').textContent = 'No property id provided.';
+        } else {
+            (async function init() {
+                await loadProperty(propId);
+            })();
+        }
+
+        async function loadProperty(id) {
+            document.getElementById('status').textContent = 'Loading property…';
+            try {
+                const res = await fetch('/api/properties');
+                const data = await res.json();
+                const prop = (data.properties || []).find(p => String(p.property_id) === String(id));
+                if (!prop) {
+                    document.getElementById('status').textContent = 'Property not found or not accessible.';
+                    return;
+                }
+                // populate fields
+                document.getElementById('title').value = prop.title || '';
+                document.getElementById('city').value = prop.city || '';
+                document.getElementById('price').value = prop.price || '';
+                document.getElementById('description').value = prop.description || '';
+
+                const existing = document.getElementById('existingPhotos');
+                existing.innerHTML = '';
+                (prop.photos || []).forEach(url => {
+                    const i = document.createElement('img');
+                    i.src = url;
+                    i.className = 'thumb';
+                    existing.appendChild(i);
+                });
+
+                document.getElementById('card').style.display = 'block';
+                document.getElementById('status').textContent = '';
+            } catch (err) {
+                console.error('loadProperty error', err);
+                document.getElementById('status').textContent = 'Error loading property';
+            }
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('city', document.getElementById('city').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('description', document.getElementById('description').value);
+
+            const files = document.getElementById('photos').files;
+            for (let i = 0; i < files.length; i++) formData.append('photos', files[i]);
+
+            document.getElementById('status').textContent = 'Saving...';
+
+            try {
+                const res = await fetch(`/api/property/${propId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert('Updated');
+                    window.location.href = '/dashboard.html';
+                } else {
+                    alert(data.error || 'Update failed');
+                    document.getElementById('status').textContent = '';
+                }
+            } catch (err) {
+                console.error('update error', err);
+                alert('Server error');
+                document.getElementById('status').textContent = '';
+            }
+        });
+    </script>
+</body>
+
+</html>
