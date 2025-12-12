@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NRI Real Estate — Login / Sign up</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --accent: #2b7cff;
+            --muted: #6b7280;
+            --gap: 18px;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: var(--bg);
+            color: #111
+        }
+
+        .wrap {
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(20, 25, 35, 0.06);
+            padding: 28px;
+            width: 420px;
+            max-width: 95%
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 20px
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px
+        }
+
+        .tabs button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            cursor: pointer
+        }
+
+        .tabs button.active {
+            background: linear-gradient(90deg, var(--accent), #1a6bff);
+            color: #fff
+        }
+
+        .form {
+            display: block
+        }
+
+        .form.hidden {
+            display: none
+        }
+
+        .form input,
+        .form select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e6e9ef;
+            margin-bottom: 12px;
+            font-size: 14px
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 8px
+        }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .center {
+            text-align: center
+        }
+
+        .spaced {
+            margin-top: 12px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card" id="auth-card">
+            <h1>NRI Real Estate Portal</h1>
+            <p class="small muted">For NRIs to buy and sell properties. Minimal demo — sign up and try adding a listing.
+            </p>
+            <div class="tabs" role="tablist" aria-label="Auth Tabs">
+                <button id="tab-login" class="active" aria-pressed="true">Login</button>
+                <button id="tab-signup" aria-pressed="false">Sign up</button>
+            </div>
+
+            <form id="login-form" class="form" onsubmit="return false;">
+                <label class="small">Username</label>
+                <input id="login-username" autocomplete="username" placeholder="Enter your username" />
+                <label class="small">Password</label>
+                <input id="login-password" type="password" autocomplete="current-password"
+                    placeholder="Enter your password" />
+                <div class="spaced center">
+                    <button id="login-btn" class="btn">Login</button>
+                </div>
+                <p class="muted center spaced">Don't have an account? <a href="#" id="show-signup-link">Sign up</a></p>
+            </form>
+
+            <form id="signup-form" class="form hidden" onsubmit="return false;">
+                <label class="small">Full name</label>
+                <input id="su-fullname" placeholder="Your full name" />
+                <label class="small">Email</label>
+                <input id="su-email" type="email" placeholder="you@example.com" />
+                <label class="small">Phone (will be shown to buyers after they click Buy)</label>
+                <input id="su-phone" placeholder="+91 98xxxxxxx" />
+                <label class="small">Country</label>
+                <input id="su-country" placeholder="Country of residence" />
+                <label class="small">Role</label>
+                <select id="su-role">
+                    <option value="both">Buyer & Seller</option>
+                    <option value="buyer">Buyer</option>
+                    <option value="seller">Seller</option>
+                </select>
+                <label class="small">Username</label>
+                <input id="su-username" placeholder="Choose a username" />
+                <label class="small">Password</label>
+                <input id="su-password" type="password" placeholder="Choose a password" />
+                <div class="spaced center">
+                    <button id="signup-btn" class="btn">Create account</button>
+                </div>
+                <p class="muted center spaced">Already registered? <a href="#" id="show-login-link">Login</a></p>
+            </form>
+
+            <p id="auth-msg" class="muted center spaced" style="display:none"></p>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+</body>
+
+</html>

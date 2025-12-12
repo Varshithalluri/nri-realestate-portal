@@ -1,0 +1,5 @@
+node_modules/
+public/uploads/
+.env
+*.log
+.DS_Store

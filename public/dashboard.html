@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NRI Real Estate — Dashboard</title>
+
+    <!-- Minimal inline styling so it's a single file. -->
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #fff;
+            --accent: #2b7cff;
+            --muted: #6b7280;
+            --gap: 16px;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: #111
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 30px auto;
+            padding: 18px
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer
+        }
+
+        .btn.secondary {
+            background: #fff;
+            color: var(--accent);
+            border: 1px solid #dbe7ff
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px
+        }
+
+        .card {
+            background: var(--card);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(20, 25, 35, 0.04)
+        }
+
+        .thumb {
+            height: 140px;
+            background: #eee;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .meta {
+            margin-top: 8px;
+            font-size: 14px
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e6e9ef;
+            font-size: 14px
+        }
+
+        textarea {
+            min-height: 80px
+        }
+
+        /* dialog styles */
+        dialog {
+            border-radius: 10px;
+            padding: 0;
+            border: none;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12)
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid #f1f3f6
+        }
+
+        .dialog-body {
+            padding: 14px
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer
+        }
+
+        .phone-box {
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 8px
+        }
+
+        .hidden {
+            display: none
+        }
+
+        .center {
+            text-align: center
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <div>
+                <h1>NRI Real Estate — Dashboard</h1>
+                <div class="muted">Browse properties or add a listing (must be logged in)</div>
+            </div>
+
+            <div class="controls">
+                <button id="btn-refresh" class="btn secondary">Refresh</button>
+                <button id="btn-add" class="btn">Add Property</button>
+                <button id="btn-logout" class="btn secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- Properties grid -->
+        <main id="main">
+            <section id="props" class="grid">
+                <!-- property cards inserted here by JS -->
+            </section>
+
+            <p id="empty-msg" class="muted center" style="display:none">No properties listed yet.</p>
+        </main>
+    </div>
+
+    <!-- Add property dialog -->
+    <dialog id="addDialog">
+        <div class="dialog-header">
+            <strong>Add Property</strong>
+            <button class="close-btn" id="addClose">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <div class="form-row">
+                <input id="p-title" type="text" placeholder="Title (eg. 2BHK in Mumbai)" />
+            </div>
+            <div class="form-row spaced">
+                <textarea id="p-desc" placeholder="Description"></textarea>
+            </div>
+            <div class="form-row">
+                <input id="p-price" type="number" placeholder="Price (INR)" />
+                <input id="p-city" type="text" placeholder="City" />
+            </div>
+            <div class="form-row spaced">
+                <input id="p-photos" type="file" accept="image/*" multiple />
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+                <button id="addCancel" class="btn secondary">Cancel</button>
+                <button id="addSave" class="btn">Save</button>
+            </div>
+            <p id="add-msg" class="muted" style="margin-top:8px;display:none"></p>
+        </div>
+    </dialog>
+
+    <!-- Buy dialog (shows owner phone) -->
+    <dialog id="buyDialog">
+        <div class="dialog-header">
+            <strong>Contact Owner</strong>
+            <button class="close-btn" id="buyClose">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <div id="buy-content">
+                <p class="muted">If you wish to buy, contact the owner below:</p>
+                <div id="owner-phone" class="phone-box">—</div>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        // public/dashboard.html inline JS
+        // Important: this file assumes your server sets a session cookie on login.
+        // The endpoints used:
+        //  - GET /api/me          -> to check logged in user
+        //  - GET /api/properties  -> list properties
+        //  - POST /api/properties/add (multipart) -> add property (requires login)
+        //  - GET /api/property/:id/contact -> fetch owner phone (requires login)
+        //  - GET /api/logout -> logout
+
+        const el = (id) => document.getElementById(id);
+
+        // dialogs
+        const addDialog = el('addDialog');
+        const buyDialog = el('buyDialog');
+
+        // buttons
+        const btnAdd = el('btn-add');
+        const btnRefresh = el('btn-refresh');
+        const btnLogout = el('btn-logout');
+
+        const addClose = el('addClose');
+        const addCancel = el('addCancel');
+        const addSave = el('addSave');
+        const addMsg = el('add-msg');
+
+        const buyClose = el('buyClose');
+        const ownerPhone = el('owner-phone');
+
+        // property list container
+        const props = el('props');
+        const emptyMsg = el('empty-msg');
+
+        // form inputs
+        const pTitle = el('p-title');
+        const pDesc = el('p-desc');
+        const pPrice = el('p-price');
+        const pCity = el('p-city');
+        const pPhotos = el('p-photos');
+
+        // Utility: show toast-like message in page
+        function showPageMsg(text, isError = false) {
+            addMsg.style.display = 'block';
+            addMsg.style.color = isError ? '#b91c1c' : '#0f5132';
+            addMsg.textContent = text;
+            setTimeout(() => addMsg.style.display = 'none', 5000);
+        }
+
+        // Check if user is logged in. If not, redirect to login page.
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me');
+                const data = await res.json();
+                if (!data.user) {
+                    window.location.href = '/';
+                    return null;
+                }
+                return data.user;
+            } catch (err) {
+                console.error('Auth check failed', err);
+                window.location.href = '/';
+                return null;
+            }
+        }
+
+        // Fetch properties and render
+        async function loadProperties() {
+            try {
+                const res = await fetch('/api/properties');
+                if (!res.ok) throw new Error('Failed to load properties');
+                const { properties } = await res.json();
+                props.innerHTML = '';
+                if (!properties || properties.length === 0) {
+                    emptyMsg.style.display = 'block';
+                    return;
+                } else emptyMsg.style.display = 'none';
+
+                properties.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+
+                    const thumb = document.createElement('div');
+                    thumb.className = 'thumb';
+                    if (p.preview_url) {
+                        const img = document.createElement('img');
+                        img.src = p.preview_url;
+                        thumb.appendChild(img);
+                    } else {
+                        thumb.textContent = 'No image';
+                    }
+
+                    const m = document.createElement('div');
+                    m.className = 'meta';
+                    m.innerHTML = `<div style="font-weight:600">${escapeHtml(p.title)}</div>
+                         <div class="muted">${escapeHtml(p.city)} • ₹${p.price ?? 'N/A'}</div>
+                         <div style="margin-top:8px;font-size:13px">${escapeHtml(p.description || '')}</div>
+                         <div style="margin-top:8px"><button class="btn" data-id="${p.property_id}" data-owner="${p.owner_id}" style="padding:6px 8px;font-size:13px">Buy</button></div>
+                         <div class="muted" style="margin-top:8px">Owner: ${escapeHtml(p.owner_name)}</div>`;
+
+                    card.appendChild(thumb);
+                    card.appendChild(m);
+                    props.appendChild(card);
+
+                    // attach Buy handler
+                    const buyBtn = m.querySelector('button');
+                    buyBtn.addEventListener('click', () => onBuyClick(p.property_id));
+                });
+            } catch (err) {
+                console.error(err);
+                emptyMsg.style.display = 'block';
+                emptyMsg.textContent = 'Unable to load properties';
+            }
+        }
+
+        // Escape simple HTML to avoid injection in this minimal demo
+        function escapeHtml(s) {
+            if (!s && s !== 0) return '';
+            return String(s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        // Add property flow
+        btnAdd.addEventListener('click', async () => {
+            // ensure user logged in
+            const user = await checkAuth();
+            if (!user) return;
+            addDialog.showModal();
+        });
+        addClose.addEventListener('click', () => addDialog.close());
+        addCancel.addEventListener('click', () => addDialog.close());
+
+        addSave.addEventListener('click', async () => {
+            const title = pTitle.value.trim();
+            if (!title) { showPageMsg('Title required', true); return; }
+            if (!pPhotos.files || pPhotos.files.length === 0) { showPageMsg('Upload at least one photo', true); return; }
+
+            // build FormData for multipart upload
+            const fd = new FormData();
+            fd.append('title', title);
+            fd.append('description', pDesc.value.trim());
+            fd.append('price', pPrice.value ? String(pPrice.value) : '');
+            fd.append('city', pCity.value.trim());
+
+            for (let i = 0; i < pPhotos.files.length; i++) {
+                fd.append('photos', pPhotos.files[i]); // server expects field name "photos"
+            }
+
+            addSave.disabled = true;
+            showPageMsg('Uploading...');
+
+            try {
+                const res = await fetch('/api/properties/add', { method: 'POST', body: fd, credentials: 'same-origin' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data && data.error ? data.error : 'Upload failed');
+                showPageMsg('Property added successfully');
+                addDialog.close();
+                // clear fields
+                pTitle.value = ''; pDesc.value = ''; pPrice.value = ''; pCity.value = ''; pPhotos.value = '';
+                // reload list
+                await loadProperties();
+            } catch (err) {
+                console.error('Add property error', err);
+                showPageMsg(err.message || 'Failed to add property', true);
+            } finally {
+                addSave.disabled = false;
+            }
+        });
+
+        // Buy click: fetch owner phone and show dialog
+        async function onBuyClick(propertyId) {
+            try {
+                const res = await fetch(`/api/property/${propertyId}/contact`);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: 'Unknown' }));
+                    throw new Error(err && err.error ? err.error : 'Failed to fetch contact');
+                }
+                const data = await res.json();
+                ownerPhone.textContent = data.phone || 'No phone provided';
+                buyDialog.showModal();
+            } catch (err) {
+                console.error('Buy error', err);
+                alert('Unable to get contact info. Make sure you are logged in.');
+            }
+        }
+
+        buyClose.addEventListener('click', () => buyDialog.close());
+
+        // Logout
+        btnLogout.addEventListener('click', async () => {
+            await fetch('/api/logout');
+            window.location.href = '/';
+        });
+
+        // Refresh
+        btnRefresh.addEventListener('click', loadProperties);
+
+        // On load: check auth then load properties
+        (async function init() {
+            await checkAuth();    // will redirect to / if not logged in
+            await loadProperties();
+        })();
+    </script>
+</body>
+
+</html>
